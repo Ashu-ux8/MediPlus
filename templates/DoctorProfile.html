@@ -636,6 +636,16 @@
             }
           }
 
+          // Debug output for troubleshooting
+          console.log('--- Appointment Debug ---');
+          console.log('Current time (minutes):', currentTime);
+          console.log('Appointment time (minutes):', appointmentTime);
+          console.log('Difference:', appointmentTime - currentTime);
+          console.log('isToday:', isToday);
+          console.log('inArrivalWindow:', inArrivalWindow);
+          console.log('Appointment Date:', appointmentData.date);
+          console.log('Current Date:', currentDateStr);
+          console.log('Appointment Time String:', appointmentData.appointmentTime);
           // Update card status classes
           card.classList.toggle('past-appointment', isPast);
           card.classList.toggle('arrival-window', inArrivalWindow);
@@ -779,7 +789,16 @@
         // Get current time for real-time comparison
         const now = new Date();
         const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
-        const currentDateStr = now.toISOString().split('T')[0];
+        const pad = n => n.toString().padStart(2, '0');
+        const currentDateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        // Extra debug for date
+        console.log('Full new Date():', now);
+        console.log('now.getFullYear():', now.getFullYear());
+        console.log('now.getMonth() + 1:', now.getMonth() + 1);
+        console.log('now.getDate():', now.getDate());
+        console.log('now.toString():', now.toString());
+        console.log('dateString (raw): >' + dateString + '<');
+        console.log('currentDateStr (raw): >' + currentDateStr + '<');
         const isToday = dateString === currentDateStr;
 
         // Constants for time windows
@@ -876,6 +895,20 @@
           const isPast = isToday && appointmentTime < currentTime;
           const inArrivalWindow = isToday && (appointmentTime - currentTime <= ARRIVAL_WINDOW && appointmentTime - currentTime > 0);
           
+          // Calculate if appointment is within the next 24 hours and in arrival window
+          let isWithin24Hours = false;
+          if (!isToday) {
+            // Parse appointment date and current date
+            const appointmentDateObj = new Date(appointment.date + 'T' + (appointment.appointmentTime || '00:00'));
+            const nowDateObj = new Date();
+            const diffMs = appointmentDateObj - nowDateObj;
+            const diffMinutes = diffMs / (1000 * 60);
+            // If appointment is in the future but within 24 hours
+            isWithin24Hours = diffMinutes > 0 && diffMinutes <= 24 * 60;
+          }
+          const flexibleArrivalWindow = (isToday && (appointmentTime - currentTime <= ARRIVAL_WINDOW && appointmentTime - currentTime > 0)) ||
+                                        isWithin24Hours && (appointmentTime - currentTime <= ARRIVAL_WINDOW && appointmentTime - currentTime > 0);
+
           // Update emergency tracking
           if (severityValue >= CRITICAL_SEVERITY && !isPast) {
             hasEmergencyCase = true;
@@ -973,7 +1006,7 @@
                   <i class="fas fa-video"></i> Join Meeting
                 </button>` : 
                 ''}
-              <button class="complete-btn" ${(!inArrivalWindow && !isPast) || isPast ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+              <button class="complete-btn" ${(!flexibleArrivalWindow && !isPast) || isPast ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
                 <i class="fas fa-check"></i> Mark as Completed
               </button>
             </div>
@@ -1026,12 +1059,23 @@
           });
         });
 
-        document.querySelectorAll('.complete-btn:not([disabled])').forEach(btn => {
-          btn.addEventListener('click', function() {
-            const appointmentCard = this.closest('.appointment-card');
+        // Force enable all complete-btn buttons for debugging
+        document.querySelectorAll('.complete-btn').forEach(btn => {
+          btn.disabled = false;
+          btn.style.opacity = '';
+          btn.style.cursor = 'pointer';
+          btn.style.border = '2px solid red'; // Visual indicator for debug
+        });
+        // Remove previous MutationObserver and per-button handlers
+        // Use event delegation for .complete-btn
+        document.getElementById('appointments-list').addEventListener('click', function(event) {
+          const btn = event.target.closest('.complete-btn');
+          if (btn && !btn.disabled) {
+            console.log('Complete button clicked (delegated)');
+            const appointmentCard = btn.closest('.appointment-card');
             currentAppointmentData = JSON.parse(appointmentCard.dataset.appointmentData);
             openPrescriptionModal();
-          });
+          }
         });
 
       } catch (error) {
@@ -1419,11 +1463,12 @@
     // Add cleanup on page unload
     window.addEventListener('unload', cleanupRealTimeUpdates);
 
-    // Initialize real-time updates when doctor profile loads
+    // Always load today's appointments on page load
     document.addEventListener('DOMContentLoaded', () => {
-      if (selectedDate) {
-        fetchAppointmentsForDate(selectedDate);
-      }
+      const today = new Date();
+      const pad = n => n.toString().padStart(2, '0');
+      const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+      fetchAppointmentsForDate(todayStr);
     });
 </script>
 </html>
