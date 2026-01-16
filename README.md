@@ -5,6 +5,9 @@
 [![Database: Firebase](https://img.shields.io/badge/Database-Firebase%20Firestore-orange.svg)](https://firebase.google.com/docs/firestore)
 [![ML Model: Random Forest](https://img.shields.io/badge/ML-Random%20Forest-green.svg)]()
 
+#<div align="center">
+[![Live Site](https://img.shields.io/badge/Live-Demo-green?style=for-the-badge)](https://mediplus-1-h3zu.onrender.com)
+</div>
 > **Mediplus is a powerful, AI-integrated web platform designed to predict diseases, recommend specialized doctors, and streamline the entire healthcare access process through smart automation and secure data management.**
 
 ---
